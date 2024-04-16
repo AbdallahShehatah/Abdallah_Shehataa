@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>فريق الإبداع (تطوير: عبدالله)</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@700&display=swap" rel="stylesheet">
+<style>
+  /* تعريف الأنماط الأساسية للصفحة */
+  body {
+    font-family: 'Tajawal', sans-serif;
+    background-image: linear-gradient(to right top, #051937, #004d7a, #008793, #00bf72, #a8eb12);
+    color: white;
+    text-align: center;
+    margin: 0;
+    padding: 20px;
+  }
+
+  /* تنسيق مشغل الصوت والساعة */
+  #audioPlayer, #stopwatch {
+    margin: 20px auto;
+    display: block;
+    width: 70%;
+    box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2);
+  }
+
+  /* تنسيق عناصر التحكم */
+  .controls {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  /* تنسيق الأزرار والتسميات */
+  label, button {
+    display: block;
+    margin: 10px;
+    flex: 1 1 40%;
+    font-family: 'Tajawal', sans-serif;
+  }
+
+  /* تنسيق مدخلات النص والقائمة */
+  #speedInput, #laps {
+    width: 60%;
+    margin: 10px auto;
+  }
+
+  /* تنسيق عرض السرعة والوقت */
+  #speedDisplay, #timeDisplay, #minutes, #seconds, #milliseconds {
+    font-weight: bold;
+    display: inline-block;
+    margin-left: 10px;
+  }
+
+  /* تنسيق الأزرار */
+  button {
+    font-size: 1em;
+    padding: 10px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+
+  /* تأثيرات الأزرار عند التفاعل */
+  button:hover {
+    background-color: #45a049;
+  }
+
+  button:active {
+    background-color: #3e8e41;
+    box-shadow: 0 5px #666;
+    transform: translateY(4px);
+  }
+
+  /* تنسيق الساعة عند التشغيل والإيقاف */
+  #stopwatch.running {
+    background-color: #FFD700;
+  }
+
+  #stopwatch.stopped {
+    background-color: #f2f2f2;
+  }
+
+  /* تنسيق الأدوار */
+  #laps div {
+    background-color: rgba(255, 255, 255, 0.2);
+    margin: 5px 0;
+    padding: 5px;
+    border-radius: 5px;
+  }
+
+</style>
+</head>
+<body>
+
+<h1>فريق الإبداع</h1>
+<h2>تجربة سرعة الاستجابة للمثيرات الصوتية مقارنة بين المكفوفين والمبصرين</h2>
+
+<!-- إدخال ملف الصوت -->
+<input type="file" id="audioInput" accept="audio/*" onchange="handleAudioUpload()">
+<!-- مشغل الصوت -->
+<audio id="audioPlayer" controls></audio>
+
+<!-- الساعة -->
+<div id="stopwatch" class="stopped">
+  <span id="minutes">00</span>:<span id="seconds">00</span>:<span id="milliseconds">000</span>
+</div>
+
+<!-- عناصر التحكم -->
+<div class="controls">
+  <button onclick="startStopwatch()">بدء</button>
+  <button onclick="stop()">إيقاف</button>
+  <button onclick="reset()">إعادة تعيين</button>
+  <button onclick="addLap()">دورة</button>
+</div>
+
+<!-- عرض الأدوار -->
+<div id="laps"></div>
+
+<script>
+  // العناصر والمتغيرات
+  const audioInput = document.getElementById('audioInput');
+  const audioPlayer = document.getElementById('audioPlayer');
+  var interval = null;
+  var minutes = 0;
+  var seconds = 0;
+  var milliseconds = 0;
+  var lapsContainer = document.getElementById('laps');
+  var stopwatch = document.getElementById('stopwatch');
+  var startTime;
+  var runningTime = 0;
+
+  // معالجة رفع الملف الصوتي
+  function handleAudioUpload() {
+    const file = audioInput.files[0];
+    if (file) {
+      const objectURL = URL.createObjectURL(file);
+      audioPlayer.src = objectURL;
+      audioPlayer.style.display = 'block';
+    } else {
+      alert('يرجى تحديد ملف الصوت أولاً.');
+    }
+  }
+
+  // بدء الساعة
+  function startStopwatch() {
+    if (!interval) {
+      startTime = Date.now() - runningTime;
+      interval = setInterval(updateTime, 1);
+      stopwatch.className = 'running';
+    }
+  }
+
+  // إيقاف الساعة
+  function stop() {
+    if (interval) {
+      runningTime = Date.now() - startTime;
+      clearInterval(interval);
+      interval = null;
+      updateDisplay();
+      stopwatch.className = 'stopped';
+    }
+  }
+
+  // إعادة تعيين الساعة
+  function reset() {
+    stop();
+    runningTime = 0;
+    updateDisplay();
+    lapsContainer.innerHTML = '';
+    stopwatch.className = 'stopped';
+  }
+
+  // تحديث الوقت
+  function updateTime() {
+    runningTime = Date.now() - startTime;
+    var newTime = new Date(runningTime);
+    minutes = newTime.getMinutes();
+    seconds = newTime.getSeconds();
+    milliseconds = newTime.getMilliseconds();
+    updateDisplay();
+  }
+
+  // تحديث العرض
+  function updateDisplay() {
+    document.getElementById('minutes').textContent = pad(minutes);
+    document.getElementById('seconds').textContent = pad(seconds);
+    document.getElementById('milliseconds').textContent = padMilliseconds(milliseconds);
+  }
+
+  // تنسيق الأرقام
+  function pad(value) {
+    return value.toString().padStart(2, '0');
+  }
+
+  // تنسيق الأرقام للميلي ثانية
+  function padMilliseconds(value) {
+    return value.toString().padStart(3, '0');
+  }
+
+// إضافة دورة جديدة مع الترقيم
+  function addLap() {
+    if (interval) {
+      var lapTime = pad(minutes) + ':' + pad(seconds) + ':' + padMilliseconds(milliseconds);
+      var lapElement = document.createElement('div');
+      lapElement.textContent = (lapsContainer.children.length + 1) + '. ' + lapTime; // إضافة الترقيم
+      lapsContainer.appendChild(lapElement);
+    }
+  }
+
+  // معالجة الأحداث
+  audioPlayer.addEventListener('play', startStopwatch);
+  audioPlayer.addEventListener('pause', stop);
+  audioPlayer.addEventListener('ended', stop);
+
+  // إضافة دورة بضغطة مفتاح
+  window.addEventListener('keydown', function(event) {
+    if (event.code === 'Space') {
+      addLap();
+    }
+  });
+// وظيفة لإنشاء وتحميل ملف CSV مع إمكانية تحديد اسم الملف
+function downloadCSV() {
+  var savedTimes = localStorage.getItem('savedLaps');
+  if (savedTimes) {
+    savedTimes = JSON.parse(savedTimes);
+    var csvContent = 'data:text/csv;charset=utf-8,';
+    // إضافة العنوان
+    csvContent += 'الرقم,الوقت\n';
+    // إضافة البيانات
+    savedTimes.forEach(function(rowArray, index){
+      var row = (index + 1) + ',' + rowArray;
+      csvContent += row + '\n';
+    });
+
+    var encodedUri = encodeURI(csvContent);
+    var link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+
+    // طلب اسم الملف من المستخدم
+    var filename = prompt('الرجاء إدخال اسم الملف:', 'saved_times.csv');
+    if (filename) {
+      link.setAttribute('download', filename);
+      document.body.appendChild(link); // Required for FF
+
+      link.click(); // This will download the data file with the given name.
+    } else {
+      alert('تم إلغاء التحميل.');
+    }
+  } else {
+    alert('لا يوجد أوقات محفوظة لتحميلها.');
+  }
+}
+
+// إضافة زر لتحميل ملف CSV
+var downloadButton = document.createElement('button');
+downloadButton.textContent = ' حفظ النتائج';
+downloadButton.onclick = downloadCSV;
+document.body.appendChild(downloadButton);
+
+
+</script>
+</body>
+</html>
